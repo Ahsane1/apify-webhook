@@ -81,7 +81,10 @@ async def receive_from_clay(request: Request):
 
     data.append(body)
     save_data(data)
-
+@app.get("/clay/data")
+async def get_saved_data():
+    data = load_data()
+    return {"data": data}
     print("New data received and saved.")
     return {"status": "Saved successfully"}
 
