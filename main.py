@@ -65,6 +65,25 @@ async def handle(request: Request):
         dataset_items = await fetch(session, dataset_url)
         unique_items = await upload_to_clay(session, dataset_items)
         return {"status": "Processed successfully"}
+# Clay Webhook Receiver
+@app.post("/clay")
+async def receive_from_clay(request: Request):
+    body = await request.json()
+    job_url = body.get("jobUrl")
+
+    if not job_url:
+        return {"error": "jobUrl is required"}
+
+    data = load_data()
+
+    if any(entry["jobUrl"] == job_url for entry in data):
+        return {"message": "Already received"}
+
+    data.append(body)
+    save_data(data)
+
+    print("New data received and saved.")
+    return {"status": "Saved successfully"}
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=10000)
