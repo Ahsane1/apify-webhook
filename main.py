@@ -83,6 +83,14 @@ async def receive_from_clay(request: Request):
 
     print("Saved new row from Clay.")
     return {"status": "Saved successfully"}
+@app.get("/clay/data")
+async def get_saved_data():
+    try:
+        with open("clay_data.json", "r") as f:
+            data = json.load(f)
+        return {"data": data}
+    except FileNotFoundError:
+        return {"data": []}
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=10000)
