@@ -1,7 +1,9 @@
+# FASTAPI Version: Webhook Trigger --> Extract Dataset --> Send to Clay
+from fastapi import FastAPI, Request
 import aiohttp
 import asyncio
-from aiohttp import web
 import json
+import uvicorn
 
 # Auth headers and URLs
 APIFY_TOKEN = "apify_api_yUm3GvrXmoeG33CxHA1CeZWARHXaWj2EjfvM"
@@ -15,6 +17,8 @@ url_of_clay_wehook = "https://api.clay.com/v3/sources/webhook/pull-in-data-from-
 
 # Fetch dataset items from Apify
 dataset_base_url = "https://api.apify.com/v2/datasets"
+
+app = FastAPI()
 
 async def fetch(session, url):
     async with session.get(url, headers=header_of_apify) as resp:
@@ -46,29 +50,21 @@ async def upload_to_clay(session, dataset_items):
             await send_to_clay(session, item)
     return unique_items
 
-# Main handler triggered by webhook
-async def handle(request):
+# Webhook endpoint
+@app.post("/")
+async def handle(request: Request):
     body = await request.json()
     dataset_id = body.get("datasetId")
 
     if not dataset_id:
-        return web.Response(status=400, text="Missing datasetId in request")
+        return {"error": "Missing datasetId in request"}
 
     dataset_url = f"{dataset_base_url}/{dataset_id}/items"
 
     async with aiohttp.ClientSession() as session:
         dataset_items = await fetch(session, dataset_url)
         unique_items = await upload_to_clay(session, dataset_items)
+        return {"status": "Processed successfully"}
 
-        with open("output.json", "w", encoding="utf-8") as f:
-            json.dump(unique_items, f, indent=4)
-            print("Dataset saved as output.json")
-
-        return web.Response(status=200, text="Processed successfully")
-
-# Web server to receive webhook
-app = web.Application()
-app.router.add_post("/", handle)
-
-if __name__ == '__main__':
-    web.run_app(app, port=8080)
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=10000)
