@@ -69,23 +69,19 @@ async def handle(request: Request):
 @app.post("/clay")
 async def receive_from_clay(request: Request):
     body = await request.json()
-    job_url = body.get("jobUrl")
 
-    if not job_url:
-        return {"error": "jobUrl is required"}
+    try:
+        with open("clay_data.json", "r") as f:
+            existing_data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        existing_data = []
 
-    data = load_data()
+    existing_data.append(body)
 
-    if any(entry["jobUrl"] == job_url for entry in data):
-        return {"message": "Already received"}
+    with open("clay_data.json", "w") as f:
+        json.dump(existing_data, f, indent=4)
 
-    data.append(body)
-    save_data(data)
-@app.get("/clay/data")
-async def get_saved_data():
-    data = load_data()
-    return {"data": data}
-    print("New data received and saved.")
+    print("Saved new row from Clay.")
     return {"status": "Saved successfully"}
 
 if __name__ == "__main__":
