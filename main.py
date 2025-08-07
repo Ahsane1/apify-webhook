@@ -1,4 +1,3 @@
-# Webhook Trigger --> Extract Dataset --> Send to Clay
 import aiohttp
 import asyncio
 from aiohttp import web
