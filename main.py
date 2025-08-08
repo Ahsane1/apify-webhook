@@ -66,23 +66,39 @@ async def handle(request: Request):
         unique_items = await upload_to_clay(session, dataset_items)
         return {"status": "Processed successfully"}
 # Clay Webhook Receiver
+from fastapi import FastAPI, Request
+import json
+import os
+
+app = FastAPI()
+
 @app.post("/clay")
 async def receive_from_clay(request: Request):
     body = await request.json()
 
+    # Load existing data
     try:
         with open("clay_data.json", "r") as f:
             existing_data = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         existing_data = []
 
+    # Append new row
     existing_data.append(body)
 
+    # Save back
     with open("clay_data.json", "w") as f:
         json.dump(existing_data, f, indent=4)
 
-    print("Saved new row from Clay.")
-    return {"status": "Saved successfully"}
+    print("✅ New row saved from Clay.")
+
+    # Custom response back to Clay
+    return {
+        "message": "Row received and saved successfully ✅",
+        "clay_response": "This is your custom message to Clay 🎯",
+        "received_name": body.get("name", "no name provided"),
+        "demo_id": "temp_12345"
+    }
 @app.get("/clay/data")
 async def get_saved_data():
     try:
