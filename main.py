@@ -137,6 +137,29 @@ async def receive_from_clay(request: Request):
         "message": "Row received, org & lead processed",
         "org_id": org_id
     }
+@app.post("/clay/update_num")
+async def update_org_number(request: Request):
+    body = await request.json()
+    org_id = body.get("org_id")
+    number = body.get("Phone-number")
+
+    if not org_id or not number:
+        return {"error": "org_id and number are required"}
+
+    PHONE_CUSTOM_FIELD = "e245c6f274d1c1023f3e3b3a161575f43a332f53"
+    url = f"{BASE_URL}/organizations/{org_id}?api_token={API_TOKEN}"
+    payload = {
+        PHONE_CUSTOM_FIELD: number
+    }
+
+    async with aiohttp.ClientSession() as session:
+        async with session.patch(url, json=payload) as resp:  # PATCH instead of PUT
+            data = await resp.json()
+            print(" Update Phone Response:", data)
+            if "data" in data and data["data"]:
+                return {"message": "Phone number updated successfully ", "org_id": org_id}
+            else:
+                return {"error": "Failed to update phone number", "details": data}
 
 # Webhook endpoint
 @app.post("/")
