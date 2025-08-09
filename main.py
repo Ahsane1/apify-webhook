@@ -153,7 +153,7 @@ async def update_org_number(request: Request):
     }
 
     async with aiohttp.ClientSession() as session:
-        async with session.patch(url, json=payload) as resp:  # PATCH instead of PUT
+        async with session.put(url, json=payload) as resp:  # PATCH instead of PUT
             data = await resp.json()
             print(" Update Phone Response:", data)
             if "data" in data and data["data"]:
