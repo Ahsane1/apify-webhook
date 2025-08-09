@@ -3,3 +3,4 @@ uvicorn
 aiofiles
 apify-client[aiohttp]
 aiohttp
+requests
