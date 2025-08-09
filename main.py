@@ -59,11 +59,14 @@ def get_all_organizations():
     r = requests.get(url, params=params)
     return r.json().get("data", [])
 
-def create_organization(name, email):
+def create_organization(name, email, website, industry, address):
     url = f"{BASE_URL}/organizations"
     payload = {
         "name": name,
-        EMAIL_CUSTOM_FIELD: email
+        EMAIL_CUSTOM_FIELD: email,
+        "website": website,
+        "industry": industry,
+        "address": address
     }
     params = {"api_token": API_TOKEN}
     r = requests.post(url, json=payload, params=params)
@@ -78,6 +81,55 @@ def create_lead(title, org_id):
     params = {"api_token": API_TOKEN}
     r = requests.post(url, json=payload, params=params)
     return r.json().get("data", {})
+
+@app.post("/clay")
+async def receive_from_clay(request: Request):
+    body = await request.json()
+    print(body)
+
+    # Save incoming data
+    try:
+        with open("clay_data.json", "r") as f:
+            existing_data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        existing_data = []
+
+    existing_data.append(body)
+    with open("clay_data.json", "w") as f:
+        json.dump(existing_data, f, indent=4)
+
+    print("✅ New row saved from Clay.")
+
+    # --- Extract fields from Clay ---
+    title = body.get("Title")
+    email = body.get("Email")
+    company_name = body.get("Company-Name")
+    website = body.get("Website")
+    industry = body.get("Sector")
+    address = body.get("Location")
+
+    # --- Pipedrive Logic ---
+    orgs = get_all_organizations()
+    org_id = None
+
+    # Check if org exists
+    for org in orgs:
+        if org["name"].strip().lower() == company_name.strip().lower():
+            org_id = org["id"]
+            break
+
+    # Create org if not exists
+    if not org_id:
+        new_org = create_organization(company_name, email, website, industry, address)
+        org_id = new_org.get("id")
+
+    # Create lead
+    create_lead(title, org_id)
+
+    return {
+        "message": "Row received, org & lead processed ✅",
+        "org_id": org_id
+    }
 # Webhook endpoint
 @app.post("/")
 async def handle(request: Request):
@@ -94,57 +146,7 @@ async def handle(request: Request):
         unique_items = await upload_to_clay(session, dataset_items)
         return {"status": "Processed successfully"}
 # Clay Webhook Receiver
-from fastapi import FastAPI, Request
-import json
-import os
 
-app = FastAPI()
-
-@app.post("/clay")
-async def receive_from_clay(request: Request):
-    body = await request.json()
-    print(body)
-
-    # Save incoming data to file
-    try:
-        with open("clay_data.json", "r") as f:
-            existing_data = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        existing_data = []
-
-    existing_data.append(body)
-
-    with open("clay_data.json", "w") as f:
-        json.dump(existing_data, f, indent=4)
-
-    print("New row saved from Clay.")
-
-    # --- Pipedrive Logic ---
-    company_name = body.get("company_name") or body.get("name")
-    email = body.get("email")
-    lead_title = body.get("lead_title", f"Lead for {company_name}")
-
-    orgs = get_all_organizations()
-    org_id = None
-
-    # Check if org exists
-    for org in orgs:
-        if org["name"].strip().lower() == company_name.strip().lower():
-            org_id = org["id"]
-            break
-
-    # Create org if not exists
-    if not org_id:
-        new_org = create_organization(company_name, email)
-        org_id = new_org.get("id")
-
-    # Create lead
-    create_lead(lead_title, org_id)
-
-    return {
-        "message": "Row received, org & lead processed",
-        "org_id": org_id
-    }
 @app.get("/clay/data")
 async def get_saved_data():
     try:
