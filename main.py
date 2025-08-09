@@ -68,7 +68,6 @@ async def create_organization(name, email, website, industry, address):
         "name": name,
         EMAIL_CUSTOM_FIELD: email,
         "website": website,
-        "industry": industry,
         "address": address
     }
     async with aiohttp.ClientSession() as session:
