@@ -123,10 +123,10 @@ async def receive_from_clay(request: Request):
 
     # Create org if not exists
    if not org_id:
-    new_org = await create_organization(company_name, email, website, industry, address)
-    if not new_org:
-        return {"error": "Failed to create organization", "details": new_org}
-    org_id = new_org["id"]
+        new_org = await create_organization(company_name, email, website, industry, address)
+        if not new_org:
+            return {"error": "Failed to create organization", "details": new_org}
+        org_id = new_org["id"]
 
     # Create lead
     await create_lead(title, org_id)
