@@ -49,7 +49,35 @@ async def upload_to_clay(session, dataset_items):
             unique_items.append(item)
             await send_to_clay(session, item)
     return unique_items
+API_TOKEN = "27d9e9ab8c16e564839bd2e7701cdae8df870092"
+BASE_URL = "https://api.pipedrive.com/v1"
+EMAIL_CUSTOM_FIELD = "d3ea4f66c0020e31d8f6e9b7019004332a17c250"
 
+def get_all_organizations():
+    url = f"{BASE_URL}/organizations"
+    params = {"api_token": API_TOKEN}
+    r = requests.get(url, params=params)
+    return r.json().get("data", [])
+
+def create_organization(name, email):
+    url = f"{BASE_URL}/organizations"
+    payload = {
+        "name": name,
+        EMAIL_CUSTOM_FIELD: email
+    }
+    params = {"api_token": API_TOKEN}
+    r = requests.post(url, json=payload, params=params)
+    return r.json().get("data", {})
+
+def create_lead(title, org_id):
+    url = f"{BASE_URL}/leads"
+    payload = {
+        "title": title,
+        "organization_id": org_id
+    }
+    params = {"api_token": API_TOKEN}
+    r = requests.post(url, json=payload, params=params)
+    return r.json().get("data", {})
 # Webhook endpoint
 @app.post("/")
 async def handle(request: Request):
@@ -76,28 +104,46 @@ app = FastAPI()
 async def receive_from_clay(request: Request):
     body = await request.json()
     print(body)
-    # Load existing data
+
+    # Save incoming data to file
     try:
         with open("clay_data.json", "r") as f:
             existing_data = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         existing_data = []
 
-    # Append new row
     existing_data.append(body)
 
-    # Save back
     with open("clay_data.json", "w") as f:
         json.dump(existing_data, f, indent=4)
 
-    print("✅ New row saved from Clay.")
+    print("New row saved from Clay.")
 
-    # Custom response back to Clay
+    # --- Pipedrive Logic ---
+    company_name = body.get("company_name") or body.get("name")
+    email = body.get("email")
+    lead_title = body.get("lead_title", f"Lead for {company_name}")
+
+    orgs = get_all_organizations()
+    org_id = None
+
+    # Check if org exists
+    for org in orgs:
+        if org["name"].strip().lower() == company_name.strip().lower():
+            org_id = org["id"]
+            break
+
+    # Create org if not exists
+    if not org_id:
+        new_org = create_organization(company_name, email)
+        org_id = new_org.get("id")
+
+    # Create lead
+    create_lead(lead_title, org_id)
+
     return {
-        "message": "Row received and saved successfully ✅",
-        "clay_response": "This is your custom message to Clay 🎯",
-        "received_name": body.get("name", "no name provided"),
-        "demo_id": "temp_12345"
+        "message": "Row received, org & lead processed",
+        "org_id": org_id
     }
 @app.get("/clay/data")
 async def get_saved_data():
