@@ -53,14 +53,15 @@ API_TOKEN = "27d9e9ab8c16e564839bd2e7701cdae8df870092"
 BASE_URL = "https://api.pipedrive.com/v1"
 EMAIL_CUSTOM_FIELD = "d3ea4f66c0020e31d8f6e9b7019004332a17c250"
 
-def get_all_organizations():
-    url = f"{BASE_URL}/organizations"
-    params = {"api_token": API_TOKEN}
-    r = requests.get(url, params=params)
-    return r.json().get("data", [])
+async def get_all_organizations():
+    url = f"{BASE_URL}/organizations?api_token={API_TOKEN}"
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as resp:
+            data = await resp.json()
+            return data.get("data", [])
 
-def create_organization(name, email, website, industry, address):
-    url = f"{BASE_URL}/organizations"
+async def create_organization(name, email, website, industry, address):
+    url = f"{BASE_URL}/organizations?api_token={API_TOKEN}"
     payload = {
         "name": name,
         EMAIL_CUSTOM_FIELD: email,
@@ -68,26 +69,28 @@ def create_organization(name, email, website, industry, address):
         "industry": industry,
         "address": address
     }
-    params = {"api_token": API_TOKEN}
-    r = requests.post(url, json=payload, params=params)
-    return r.json().get("data", {})
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, json=payload) as resp:
+            data = await resp.json()
+            return data.get("data", {})
 
-def create_lead(title, org_id):
-    url = f"{BASE_URL}/leads"
+async def create_lead(title, org_id):
+    url = f"{BASE_URL}/leads?api_token={API_TOKEN}"
     payload = {
         "title": title,
         "organization_id": org_id
     }
-    params = {"api_token": API_TOKEN}
-    r = requests.post(url, json=payload, params=params)
-    return r.json().get("data", {})
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, json=payload) as resp:
+            data = await resp.json()
+            return data.get("data", {})
 
 @app.post("/clay")
 async def receive_from_clay(request: Request):
     body = await request.json()
     print(body)
 
-    # Save incoming data
+    # Save incoming data locally
     try:
         with open("clay_data.json", "r") as f:
             existing_data = json.load(f)
@@ -98,9 +101,9 @@ async def receive_from_clay(request: Request):
     with open("clay_data.json", "w") as f:
         json.dump(existing_data, f, indent=4)
 
-    print("✅ New row saved from Clay.")
+    print(" New row saved from Clay.")
 
-    # --- Extract fields from Clay ---
+    # Extract fields from Clay
     title = body.get("Title")
     email = body.get("Email")
     company_name = body.get("Company-Name")
@@ -109,7 +112,7 @@ async def receive_from_clay(request: Request):
     address = body.get("Location")
 
     # --- Pipedrive Logic ---
-    orgs = get_all_organizations()
+    orgs = await get_all_organizations()
     org_id = None
 
     # Check if org exists
@@ -120,14 +123,14 @@ async def receive_from_clay(request: Request):
 
     # Create org if not exists
     if not org_id:
-        new_org = create_organization(company_name, email, website, industry, address)
+        new_org = await create_organization(company_name, email, website, industry, address)
         org_id = new_org.get("id")
 
     # Create lead
-    create_lead(title, org_id)
+    await create_lead(title, org_id)
 
     return {
-        "message": "Row received, org & lead processed ✅",
+        "message": "Row received, org & lead processed ",
         "org_id": org_id
     }
 # Webhook endpoint
