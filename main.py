@@ -72,8 +72,8 @@ async def create_organization(name, email, website, industry, address):
     async with aiohttp.ClientSession() as session:
         async with session.post(url, json=payload) as resp:
             data = await resp.json()
-            return data.get("data", {})
-
+            print("📌 Create Org Response:", data)  # Debug log
+            return data.get("data")  # Can be None if API failed
 async def create_lead(title, org_id):
     url = f"{BASE_URL}/leads?api_token={API_TOKEN}"
     payload = {
@@ -122,9 +122,11 @@ async def receive_from_clay(request: Request):
             break
 
     # Create org if not exists
-    if not org_id:
-        new_org = await create_organization(company_name, email, website, industry, address)
-        org_id = new_org.get("id")
+   if not org_id:
+    new_org = await create_organization(company_name, email, website, industry, address)
+    if not new_org:
+        return {"error": "Failed to create organization", "details": new_org}
+    org_id = new_org["id"]
 
     # Create lead
     await create_lead(title, org_id)
