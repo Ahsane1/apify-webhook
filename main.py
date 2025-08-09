@@ -75,7 +75,7 @@ app = FastAPI()
 @app.post("/clay")
 async def receive_from_clay(request: Request):
     body = await request.json()
-
+    print(body)
     # Load existing data
     try:
         with open("clay_data.json", "r") as f:
