@@ -5,6 +5,7 @@ import asyncio
 import json
 import uvicorn
 import requests
+
 # Auth headers and URLs
 APIFY_TOKEN = "apify_api_yUm3GvrXmoeG33CxHA1CeZWARHXaWj2EjfvM"
 header_of_apify = {
@@ -49,6 +50,7 @@ async def upload_to_clay(session, dataset_items):
             unique_items.append(item)
             await send_to_clay(session, item)
     return unique_items
+
 API_TOKEN = "27d9e9ab8c16e564839bd2e7701cdae8df870092"
 BASE_URL = "https://api.pipedrive.com/v1"
 EMAIL_CUSTOM_FIELD = "d3ea4f66c0020e31d8f6e9b7019004332a17c250"
@@ -74,6 +76,7 @@ async def create_organization(name, email, website, industry, address):
             data = await resp.json()
             print("📌 Create Org Response:", data)  # Debug log
             return data.get("data")  # Can be None if API failed
+
 async def create_lead(title, org_id):
     url = f"{BASE_URL}/leads?api_token={API_TOKEN}"
     payload = {
@@ -101,7 +104,7 @@ async def receive_from_clay(request: Request):
     with open("clay_data.json", "w") as f:
         json.dump(existing_data, f, indent=4)
 
-    print(" New row saved from Clay.")
+    print("New row saved from Clay.")
 
     # Extract fields from Clay
     title = body.get("Title")
@@ -122,7 +125,7 @@ async def receive_from_clay(request: Request):
             break
 
     # Create org if not exists
-   if not org_id:
+    if not org_id:
         new_org = await create_organization(company_name, email, website, industry, address)
         if not new_org:
             return {"error": "Failed to create organization", "details": new_org}
@@ -132,9 +135,10 @@ async def receive_from_clay(request: Request):
     await create_lead(title, org_id)
 
     return {
-        "message": "Row received, org & lead processed ",
+        "message": "Row received, org & lead processed",
         "org_id": org_id
     }
+
 # Webhook endpoint
 @app.post("/")
 async def handle(request: Request):
@@ -150,8 +154,8 @@ async def handle(request: Request):
         dataset_items = await fetch(session, dataset_url)
         unique_items = await upload_to_clay(session, dataset_items)
         return {"status": "Processed successfully"}
-# Clay Webhook Receiver
 
+# Clay Webhook Receiver
 @app.get("/clay/data")
 async def get_saved_data():
     try:
