@@ -4,7 +4,7 @@ import aiohttp
 import asyncio
 import json
 import uvicorn
-
+import requests
 # Auth headers and URLs
 APIFY_TOKEN = "apify_api_yUm3GvrXmoeG33CxHA1CeZWARHXaWj2EjfvM"
 header_of_apify = {
