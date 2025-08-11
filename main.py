@@ -4,7 +4,6 @@ import aiohttp
 import asyncio
 import json
 import uvicorn
-import requests
 
 # Auth headers and URLs
 APIFY_TOKEN = "apify_api_yUm3GvrXmoeG33CxHA1CeZWARHXaWj2EjfvM"
@@ -12,12 +11,16 @@ header_of_apify = {
     "Authorization": f"Bearer {APIFY_TOKEN}"
 }
 headers_of_clay = {
-    "x-clay-webhook-auth": "60fe90cfc871e510b345"
+    "x-clay-webhook-auth": "7fd35c803b295103e323"
 }
-url_of_clay_wehook = "https://api.clay.com/v3/sources/webhook/pull-in-data-from-a-webhook-6822471d-c118-40af-a632-217166c32541"
+url_of_clay_wehook = "https://api.clay.com/v3/sources/webhook/pull-in-data-from-a-webhook-e87962f1-f38a-4c93-a700-c8eb99682e5c"
 
 # Fetch dataset items from Apify
 dataset_base_url = "https://api.apify.com/v2/datasets"
+API_TOKEN = "27d9e9ab8c16e564839bd2e7701cdae8df870092"
+BASE_URL = "https://api.pipedrive.com/v1"
+email_custom_code = "d3ea4f66c0020e31d8f6e9b7019004332a17c250" #custom fields in pipedrive
+phone_custom_code = "e245c6f274d1c1023f3e3b3a161575f43a332f53"
 
 app = FastAPI()
 
@@ -51,9 +54,7 @@ async def upload_to_clay(session, dataset_items):
             await send_to_clay(session, item)
     return unique_items
 
-API_TOKEN = "27d9e9ab8c16e564839bd2e7701cdae8df870092"
-BASE_URL = "https://api.pipedrive.com/v1"
-EMAIL_CUSTOM_FIELD = "d3ea4f66c0020e31d8f6e9b7019004332a17c250"
+
 
 async def get_all_organizations():
     url = f"{BASE_URL}/organizations?api_token={API_TOKEN}"
@@ -62,18 +63,18 @@ async def get_all_organizations():
             data = await resp.json()
             return data.get("data", [])
 
-async def create_organization(name, email, website, industry, address):
+async def create_organization(name, email, website,address):
     url = f"{BASE_URL}/organizations?api_token={API_TOKEN}"
     payload = {
         "name": name,
-        EMAIL_CUSTOM_FIELD: email,
+        email_custom_code: email,
         "website": website,
         "address": address
     }
     async with aiohttp.ClientSession() as session:
         async with session.post(url, json=payload) as resp:
             data = await resp.json()
-            print("📌 Create Org Response:", data)  # Debug log
+            print("Create Org Response:", data)  # Debug log
             return data.get("data")  # Can be None if API failed
 
 async def create_lead(title, org_id):
@@ -91,20 +92,6 @@ async def create_lead(title, org_id):
 async def receive_from_clay(request: Request):
     body = await request.json()
     print(body)
-
-    # Save incoming data locally
-    try:
-        with open("clay_data.json", "r") as f:
-            existing_data = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        existing_data = []
-
-    existing_data.append(body)
-    with open("clay_data.json", "w") as f:
-        json.dump(existing_data, f, indent=4)
-
-    print("New row saved from Clay.")
-
     # Extract fields from Clay
     title = body.get("Title")
     email = body.get("Email")
@@ -112,31 +99,35 @@ async def receive_from_clay(request: Request):
     website = body.get("Website")
     industry = body.get("Sector")
     address = body.get("Location")
-
-    # --- Pipedrive Logic ---
+    
     orgs = await get_all_organizations()
     org_id = None
 
-    # Check if org exists
+    
     for org in orgs:
         if org["name"].strip().lower() == company_name.strip().lower():
-            org_id = org["id"]
+            org_id = org.get("id")
             break
 
-    # Create org if not exists
+
     if not org_id:
-        new_org = await create_organization(company_name, email, website, industry, address)
+        new_org = await create_organization(company_name, email, website,address)
         if not new_org:
             return {"error": "Failed to create organization", "details": new_org}
-        org_id = new_org["id"]
+        org_id = new_org.get("id")
 
     # Create lead
     await create_lead(title, org_id)
 
     return {
-        "message": "Row received, org & lead processed",
+        "message": "Row received, org and lead processed",
         "org_id": org_id
     }
+
+
+
+
+
 @app.post("/clay/update_num")
 async def update_org_number(request: Request):
     body = await request.json()
@@ -146,14 +137,14 @@ async def update_org_number(request: Request):
     if not org_id or not number:
         return {"error": "org_id and number are required"}
 
-    PHONE_CUSTOM_FIELD = "e245c6f274d1c1023f3e3b3a161575f43a332f53"
+    
     url = f"{BASE_URL}/organizations/{org_id}?api_token={API_TOKEN}"
     payload = {
-        PHONE_CUSTOM_FIELD: number
+        phone_custom_code: number
     }
 
     async with aiohttp.ClientSession() as session:
-        async with session.put(url, json=payload) as resp:  # PATCH instead of PUT
+        async with session.put(url, json=payload) as resp: 
             data = await resp.json()
             print(" Update Phone Response:", data)
             if "data" in data and data["data"]:
@@ -161,8 +152,13 @@ async def update_org_number(request: Request):
             else:
                 return {"error": "Failed to update phone number", "details": data}
 
+
+
+
+
+
 # Webhook endpoint
-@app.post("/")
+@app.post("/apify")
 async def handle(request: Request):
     body = await request.json()
     dataset_id = body.get("datasetId")
@@ -177,15 +173,8 @@ async def handle(request: Request):
         unique_items = await upload_to_clay(session, dataset_items)
         return {"status": "Processed successfully"}
 
-# Clay Webhook Receiver
-@app.get("/clay/data")
-async def get_saved_data():
-    try:
-        with open("clay_data.json", "r") as f:
-            data = json.load(f)
-        return {"data": data}
-    except FileNotFoundError:
-        return {"data": []}
+
+
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=10000)
