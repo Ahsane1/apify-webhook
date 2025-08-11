@@ -158,7 +158,7 @@ async def update_org_number(request: Request):
 
 
 # Webhook endpoint
-@app.post("/apify")
+@app.post("/")
 async def handle(request: Request):
     body = await request.json()
     dataset_id = body.get("datasetId")
