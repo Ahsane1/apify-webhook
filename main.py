@@ -1,4 +1,4 @@
-# FASTAPI Version: Webhook Trigger --> Extract Dataset -> Send to Clay
+# FASTAPI Version: Webhook Trigger --> Extract Dataset --> Send to Clay
 from fastapi import FastAPI, Request
 import aiohttp
 import asyncio
@@ -118,7 +118,7 @@ async def get_all_organizations():
 async def create_organization(name,website, address):
     payload = {
         "name": name,
-        "website" : website,
+        "website": website,
         "address": address
     }
     async with aiohttp.ClientSession() as session:
@@ -198,14 +198,13 @@ async def receive_from_clay(request: Request):
             CUSTOM_FIELDS["person1_full_name"]: full_name,
             CUSTOM_FIELDS["person1_job_title"]: job_title,
             CUSTOM_FIELDS["person1_location"]: location,
-            CUSTOM_FIELDS["person1_linkedin"]: linkedin,
-            CUSTOM_FIELDS["person1_phone"]: phone
+            CUSTOM_FIELDS["person1_linkedin"]: linkedin
         }
         await update_org_fields(org_id, update_fields)
         person_number = 1
+        lead = await create_lead(title, org_id)
 
-    # 2️⃣ Create Lead
-    lead = await create_lead(title, org_id)
+    
 
     return {
         "message": "Row processed",
