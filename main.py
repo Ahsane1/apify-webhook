@@ -88,6 +88,8 @@ async def create_lead(title, org_id):
             return data.get("data", {})
 
 
+
+
 # Custom field codes mapping
 CUSTOM_FIELDS = {
     # Person 1
@@ -103,7 +105,8 @@ CUSTOM_FIELDS = {
     "person2_job_title": "0c0e4fd1738d92f00485521db8f4d9486f3fe7a6",
     "person2_location": "5fcebc80bcc2393f48b6207982d70ad3c7968e69",
     "person2_linkedin": "4970a94767d1ee1dad1fc97a9d6b972e736fdb61",
-    "person2_phone": "353c5ef54c699b1959ae32c9ce7fd2a4b8abb5ab"
+    "person2_phone": "353c5ef54c699b1959ae32c9ce7fd2a4b8abb5ab",
+    "person2_work_email": "25cf48c981ab9ab316519347a6835ece494d2c93"
 }
 
 async def get_all_organizations():
@@ -148,6 +151,7 @@ async def receive_from_clay(request: Request):
     job_title = body.get("Job Title")
     location = body.get("Location-person")
     linkedin = body.get("LinkedIn Profile")
+    work_email = body.get("Work Email")
     
 
     # 1️⃣ Find or Create Organization
@@ -165,7 +169,8 @@ async def receive_from_clay(request: Request):
                     CUSTOM_FIELDS["person2_full_name"]: full_name,
                     CUSTOM_FIELDS["person2_job_title"]: job_title,
                     CUSTOM_FIELDS["person2_location"]: location,
-                    CUSTOM_FIELDS["person2_linkedin"]: linkedin
+                    CUSTOM_FIELDS["person2_linkedin"]: linkedin,
+                    CUSTOM_FIELDS["person2_work_email"]: work_email
                 }
                 await update_org_fields(org_id, update_fields)
                 person_number = 2
@@ -175,7 +180,8 @@ async def receive_from_clay(request: Request):
                     CUSTOM_FIELDS["person1_full_name"]: full_name,
                     CUSTOM_FIELDS["person1_job_title"]: job_title,
                     CUSTOM_FIELDS["person1_location"]: location,
-                    CUSTOM_FIELDS["person1_linkedin"]: linkedin
+                    CUSTOM_FIELDS["person1_linkedin"]: linkedin,
+                    CUSTOM_FIELDS["person1_work_email"]: work_email
                    
                 }
                 await update_org_fields(org_id, update_fields)
@@ -184,13 +190,14 @@ async def receive_from_clay(request: Request):
 
     if not org_id:
         # Create org and fill person 1
-        new_org = await create_organization(company_name, website, address)
+        new_org = await create_organization(company_name,  website, address)
         org_id = new_org.get("id")
         update_fields = {
             CUSTOM_FIELDS["person1_full_name"]: full_name,
             CUSTOM_FIELDS["person1_job_title"]: job_title,
             CUSTOM_FIELDS["person1_location"]: location,
-            CUSTOM_FIELDS["person1_linkedin"]: linkedin
+            CUSTOM_FIELDS["person1_linkedin"]: linkedin,
+            CUSTOM_FIELDS["person1_phone"]: phone
         }
         await update_org_fields(org_id, update_fields)
         person_number = 1
