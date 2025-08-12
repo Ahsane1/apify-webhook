@@ -15,12 +15,9 @@ headers_of_clay = {
 }
 url_of_clay_wehook = "https://api.clay.com/v3/sources/webhook/pull-in-data-from-a-webhook-e87962f1-f38a-4c93-a700-c8eb99682e5c"
 
-# Fetch dataset items from Apify
 dataset_base_url = "https://api.apify.com/v2/datasets"
 PIPEDRIVE_TOKEN = "27d9e9ab8c16e564839bd2e7701cdae8df870092"
 PIPEDRIVE_BASE_URL = "https://api.pipedrive.com/v1"
-email_custom_code = "d3ea4f66c0020e31d8f6e9b7019004332a17c250" #custom fields in pipedrive
-phone_custom_code = "e245c6f274d1c1023f3e3b3a161575f43a332f53"
 
 app = FastAPI()
 
@@ -45,50 +42,12 @@ async def send_to_clay(session, item):
 # Remove duplicates and upload to Clay
 async def upload_to_clay(session, dataset_items):
     seen = set()
-    unique_items = []
     for item in dataset_items:
         uniqueness = (item.get('companyName'), item.get('location'))
         if uniqueness and uniqueness not in seen:
             seen.add(uniqueness)
-            unique_items.append(item)
             await send_to_clay(session, item)
-    return unique_items
-
-
-
-async def get_all_organizations():
-    url = f"{PIPEDRIVE_BASE_URL}/organizations?api_token={PIPEDRIVE_TOKEN}"
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as resp:
-            data = await resp.json()
-            return data.get("data", [])
-
-async def create_organization(name,  website,address):
-    url = f"{PIPEDRIVE_BASE_URL}/organizations?api_token={PIPEDRIVE_TOKEN}"
-    payload = {
-        "name": name,
-        "website": website,
-        "address": address
-    }
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url, json=payload) as resp:
-            data = await resp.json()
-            print("Create Org Response:", data)  # Debug log
-            return data.get("data")  # Can be None if API failed
-
-async def create_lead(title, org_id):
-    url = f"{PIPEDRIVE_BASE_URL}/leads?api_token={PIPEDRIVE_TOKEN}"
-    payload = {
-        "title": title,
-        "organization_id": org_id
-    }
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url, json=payload) as resp:
-            data = await resp.json()
-            return data.get("data", {})
-
-
-
+    return list(seen)
 
 # Custom field codes mapping
 CUSTOM_FIELDS = {
@@ -109,16 +68,21 @@ CUSTOM_FIELDS = {
     "person2_work_email": "25cf48c981ab9ab316519347a6835ece494d2c93"
 }
 
+# ---- Pipedrive API Functions ----
 async def get_all_organizations():
     async with aiohttp.ClientSession() as session:
         async with session.get(f"{PIPEDRIVE_BASE_URL}/organizations?api_token={PIPEDRIVE_TOKEN}") as resp:
             data = await resp.json()
             return data.get("data", [])
 
-async def create_organization(name,website, address):
-    payload = {
-        "name": name
-    }
+async def get_org_details(org_id):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f"{PIPEDRIVE_BASE_URL}/organizations/{org_id}?api_token={PIPEDRIVE_TOKEN}") as resp:
+            data = await resp.json()
+            return data.get("data")
+
+async def create_organization(name, website, address):
+    payload = {"name": name, "website": website, "address": address}
     async with aiohttp.ClientSession() as session:
         async with session.post(f"{PIPEDRIVE_BASE_URL}/organizations?api_token={PIPEDRIVE_TOKEN}", json=payload) as resp:
             data = await resp.json()
@@ -130,21 +94,19 @@ async def update_org_fields(org_id, fields):
             return await resp.json()
 
 async def create_lead(title, org_id):
-    payload = {
-        "title": title,
-        "organization_id": org_id
-    }
+    payload = {"title": title, "organization_id": org_id}
     async with aiohttp.ClientSession() as session:
         async with session.post(f"{PIPEDRIVE_BASE_URL}/leads?api_token={PIPEDRIVE_TOKEN}", json=payload) as resp:
             data = await resp.json()
             return data.get("data")
 
+# ---- Main Endpoint ----
 @app.post("/clay")
 async def receive_from_clay(request: Request):
     body = await request.json()
     
     company_name = body.get("Company-Name")
-    title= company_name + " Lead"
+    title = f"{company_name} Lead"
     website = body.get("Website")
     address = body.get("Location")
     full_name = body.get("Full Name")
@@ -152,9 +114,7 @@ async def receive_from_clay(request: Request):
     location = body.get("Location-person")
     linkedin = body.get("LinkedIn Profile")
     work_email = body.get("Work Email")
-    
 
-    # 1️⃣ Find or Create Organization
     orgs = await get_all_organizations()
     org_id = None
     person_number = None
@@ -162,8 +122,11 @@ async def receive_from_clay(request: Request):
     for org in orgs:
         if org["name"].strip().lower() == company_name.strip().lower():
             org_id = org.get("id")
-            # check if person1_full_name is already filled
-            if org.get(CUSTOM_FIELDS["person1_full_name"]):
+            
+            # 🔄 Re-fetch latest data to avoid overwriting
+            latest_org = await get_org_details(org_id)
+
+            if latest_org.get(CUSTOM_FIELDS["person1_full_name"]):
                 # Fill Person 2
                 update_fields = {
                     CUSTOM_FIELDS["person2_full_name"]: full_name,
@@ -182,15 +145,13 @@ async def receive_from_clay(request: Request):
                     CUSTOM_FIELDS["person1_location"]: location,
                     CUSTOM_FIELDS["person1_linkedin"]: linkedin,
                     CUSTOM_FIELDS["person1_work_email"]: work_email
-                   
                 }
                 await update_org_fields(org_id, update_fields)
                 person_number = 1
             break
 
     if not org_id:
-        # Create org and fill person 1
-        new_org = await create_organization(company_name,  website, address)
+        new_org = await create_organization(company_name, website, address)
         org_id = new_org.get("id")
         update_fields = {
             CUSTOM_FIELDS["person1_full_name"]: full_name,
@@ -202,7 +163,6 @@ async def receive_from_clay(request: Request):
         await update_org_fields(org_id, update_fields)
         person_number = 1
 
-    # 2️⃣ Create Lead
     lead = await create_lead(title, org_id)
 
     return {
@@ -211,10 +171,6 @@ async def receive_from_clay(request: Request):
         "lead_id": lead.get("id") if lead else None,
         "person_number": person_number
     }
-
-
-
-
 
 # Webhook endpoint
 @app.post("/")
@@ -229,11 +185,8 @@ async def handle(request: Request):
 
     async with aiohttp.ClientSession() as session:
         dataset_items = await fetch(session, dataset_url)
-        unique_items = await upload_to_clay(session, dataset_items)
+        await upload_to_clay(session, dataset_items)
         return {"status": "Processed successfully"}
-
-
-
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=10000)
