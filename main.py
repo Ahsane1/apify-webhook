@@ -1,4 +1,4 @@
-# FASTAPI Version: Webhook Trigger --> Extract Dataset --> Send to Clay
+# FASTAPI Version: Webhook Trigger --> Extract Dataset -> Send to Clay
 from fastapi import FastAPI, Request
 import aiohttp
 import asyncio
