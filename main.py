@@ -244,7 +244,7 @@ async def update_org_number(request: Request):
         return {"error": "org_id , number and person are required"}
 
     
-    url = f"{BASE_URL}/organizations/{org_id}?api_token={API_TOKEN}"
+    url = f"{PIPEDRIVE_BASE_URL}/organizations/{org_id}?api_token={PIPEDRIVE_TOKEN}"
     if person == 1:
         payload = {
             CUSTOM_FIELDS["person1_phone"]: number
