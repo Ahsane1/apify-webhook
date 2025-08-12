@@ -117,7 +117,9 @@ async def get_all_organizations():
 
 async def create_organization(name,website, address):
     payload = {
-        "name": name
+        "name": name,
+        "website" : website,
+        "address": address
     }
     async with aiohttp.ClientSession() as session:
         async with session.post(f"{PIPEDRIVE_BASE_URL}/organizations?api_token={PIPEDRIVE_TOKEN}", json=payload) as resp:
