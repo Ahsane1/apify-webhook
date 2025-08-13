@@ -62,7 +62,7 @@ async def send_to_clay(session, item):
         "Description": item.get('description'),
         "Job Url": item.get('jobUrl')
     }
-    async with session.post(url_of_clay_wehook, headers=headers_of_clay, json=payload_clay) as res:
+    async with session.post(url_of_clay_webhook, headers=headers_of_clay, json=payload_clay) as res:
         print("Status:", res.status)
 
 # Remove duplicates and upload to Clay
