@@ -97,7 +97,7 @@ async def create_deal(title, org_id):
     url = f"{PIPEDRIVE_BASE_URL}/deals?api_token={PIPEDRIVE_TOKEN}"
     payload = {
         "title": title,
-        "organization_id": org_id
+        "org_id": org_id
     }
     async with aiohttp.ClientSession() as session:
         async with session.post(url, json=payload) as resp:
@@ -186,8 +186,8 @@ async def receive_from_clay(request: Request):
             CUSTOM_FIELDS["person1_work_email"]: work_email
         }
         await update_org_fields(org_id, update_fields)
-        person_number = 1
         deal = await create_deal(title, org_id)
+        person_number = 1
 
     
 
