@@ -232,7 +232,7 @@ async def handle(request: Request):
 
     async with aiohttp.ClientSession() as session:
         dataset_items = await fetch(session, dataset_url)
-        unique_items = await check_and_send_to_clay(session, dataset_items)
+        unique_items = await check_uniqueness_and_send_to_clay(session, dataset_items)
         return {"status": "Processed successfully"}
 
 
