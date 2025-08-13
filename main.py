@@ -18,7 +18,7 @@ headers_of_clay = { #aus
 }
 
 #url_of_clay_wehook = "https://api.clay.com/v3/sources/webhook/pull-in-data-from-a-webhook-e87962f1-f38a-4c93-a700-c8eb99682e5c"#usa
-url_of_claywebhook = "https://api.clay.com/v3/sources/webhook/pull-in-data-from-a-webhook-53d0e72f-6502-41d4-9cb9-68d34c57fbe1" #aus
+url_of_clay_webhook = "https://api.clay.com/v3/sources/webhook/pull-in-data-from-a-webhook-53d0e72f-6502-41d4-9cb9-68d34c57fbe1" #aus
 # Fetch dataset items from Apify
 dataset_base_url = "https://api.apify.com/v2/datasets"
 PIPEDRIVE_TOKEN = "27d9e9ab8c16e564839bd2e7701cdae8df870092"
