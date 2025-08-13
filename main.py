@@ -44,7 +44,6 @@ CUSTOM_FIELDS = {
     "person2_work_email": "25cf48c981ab9ab316519347a6835ece494d2c93"
 }
 
-
 app = FastAPI()
 
 async def fetch(session, url):
@@ -99,8 +98,8 @@ async def create_organization(name,  website,address):
             print("Create Org Response:", data)  # Debug log
             return data.get("data")  # Can be None if API failed
 
-async def create_lead(title, org_id):
-    url = f"{PIPEDRIVE_BASE_URL}/leads?api_token={PIPEDRIVE_TOKEN}"
+async def create_deal(title, org_id):
+    url = f"{PIPEDRIVE_BASE_URL}/deals?api_token={PIPEDRIVE_TOKEN}"
     payload = {
         "title": title,
         "organization_id": org_id
@@ -134,13 +133,13 @@ async def update_org_fields(org_id, fields):
         async with session.put(f"{PIPEDRIVE_BASE_URL}/organizations/{org_id}?api_token={PIPEDRIVE_TOKEN}", json=fields) as resp:
             return await resp.json()
 
-async def create_lead(title, org_id):
+async def create_deal(title, org_id):
     payload = {
         "title": title,
         "organization_id": org_id
     }
     async with aiohttp.ClientSession() as session:
-        async with session.post(f"{PIPEDRIVE_BASE_URL}/leads?api_token={PIPEDRIVE_TOKEN}", json=payload) as resp:
+        async with session.post(f"{PIPEDRIVE_BASE_URL}/deals?api_token={PIPEDRIVE_TOKEN}", json=payload) as resp:
             data = await resp.json()
             return data.get("data")
 
@@ -149,7 +148,7 @@ async def receive_from_clay(request: Request):
     body = await request.json()
     
     company_name = body.get("Company-Name")
-    title= company_name + " Lead"
+    title= company_name + " Deal"
     website = body.get("Website")
     address = body.get("Location")
     full_name = body.get("Full Name")
@@ -205,7 +204,7 @@ async def receive_from_clay(request: Request):
         }
         await update_org_fields(org_id, update_fields)
         person_number = 1
-        lead = await create_lead(title, org_id)
+        deal = await create_deal(title, org_id)
 
     
 
