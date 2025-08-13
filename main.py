@@ -133,15 +133,6 @@ async def update_org_fields(org_id, fields):
         async with session.put(f"{PIPEDRIVE_BASE_URL}/organizations/{org_id}?api_token={PIPEDRIVE_TOKEN}", json=fields) as resp:
             return await resp.json()
 
-async def create_deal(title, org_id):
-    payload = {
-        "title": title,
-        "organization_id": org_id
-    }
-    async with aiohttp.ClientSession() as session:
-        async with session.post(f"{PIPEDRIVE_BASE_URL}/deals?api_token={PIPEDRIVE_TOKEN}", json=payload) as resp:
-            data = await resp.json()
-            return data.get("data")
 
 @app.post("/clay")
 async def receive_from_clay(request: Request):
