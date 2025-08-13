@@ -78,12 +78,7 @@ async def check_uniqueness_and_send_to_clay(session, dataset_items):
 
 
 
-async def get_all_organizations():
-    url = f"{PIPEDRIVE_BASE_URL}/organizations?api_token={PIPEDRIVE_TOKEN}"
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as resp:
-            data = await resp.json()
-            return data.get("data", [])
+
 
 async def create_organization(name,  website,address):
     url = f"{PIPEDRIVE_BASE_URL}/organizations?api_token={PIPEDRIVE_TOKEN}"
@@ -118,16 +113,7 @@ async def get_all_organizations():
             data = await resp.json()
             return data.get("data", [])
 
-async def create_organization(name,website, address):
-    payload = {
-        "name": name,
-        "website": website,
-        "address": address
-    }
-    async with aiohttp.ClientSession() as session:
-        async with session.post(f"{PIPEDRIVE_BASE_URL}/organizations?api_token={PIPEDRIVE_TOKEN}", json=payload) as resp:
-            data = await resp.json()
-            return data.get("data")
+
 
 async def update_org_fields(org_id, fields):
     async with aiohttp.ClientSession() as session:
@@ -170,19 +156,20 @@ async def receive_from_clay(request: Request):
                 }
                # await update_org_fields(org_id, update_fields)
                 person_number = 2
-            else:
-                # Fill Person 1
-                update_fields = {
-                    CUSTOM_FIELDS["person1_full_name"]: full_name,
-                    CUSTOM_FIELDS["person1_job_title"]: job_title,
-                    CUSTOM_FIELDS["person1_location"]: location,
-                    CUSTOM_FIELDS["person1_linkedin"]: linkedin,
-                    CUSTOM_FIELDS["person1_work_email"]: work_email
+                break
+            # else:
+            #     # Fill Person 1
+            #     update_fields = {
+            #         CUSTOM_FIELDS["person1_full_name"]: full_name,
+            #         CUSTOM_FIELDS["person1_job_title"]: job_title,
+            #         CUSTOM_FIELDS["person1_location"]: location,
+            #         CUSTOM_FIELDS["person1_linkedin"]: linkedin,
+            #         CUSTOM_FIELDS["person1_work_email"]: work_email
                    
-                }
-                await update_org_fields(org_id, update_fields)
-                person_number = 1
-            break
+            #     }
+              #  await update_org_fields(org_id, update_fields)
+            #     person_number = 1
+            # break
 
     if not org_id:
         # Create org and fill person 1
