@@ -154,8 +154,11 @@ async def receive_from_clay(request: Request):
                     CUSTOM_FIELDS["person2_linkedin"]: linkedin,
                     CUSTOM_FIELDS["person2_work_email"]: work_email
                 }
-               # await update_org_fields(org_id, update_fields)
+                await update_org_fields(org_id, update_fields)
                 person_number = 2
+                break
+            else:
+                org_id = None
                 break
             # else:
             #     # Fill Person 1
@@ -182,7 +185,7 @@ async def receive_from_clay(request: Request):
             CUSTOM_FIELDS["person1_linkedin"]: linkedin,
             CUSTOM_FIELDS["person1_work_email"]: work_email
         }
-        #await update_org_fields(org_id, update_fields)
+        await update_org_fields(org_id, update_fields)
         person_number = 1
         deal = await create_deal(title, org_id)
 
