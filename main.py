@@ -17,7 +17,7 @@ headers_of_clay = { #usa
  #   "x-clay-webhook-auth": "53d5870039705a75b900"
 #}
 
-url_of_clay_webhook = "https://api.clay.com/v3/sources/webhook/pull-in-data-from-a-webhook-e87962f1-f38a-4c93-a700-c8eb99682e5c"#usa
+url_of_clay_wehook = "https://api.clay.com/v3/sources/webhook/pull-in-data-from-a-webhook-e87962f1-f38a-4c93-a700-c8eb99682e5c"#usa
 #url_of_clay_webhook = "https://api.clay.com/v3/sources/webhook/pull-in-data-from-a-webhook-53d0e72f-6502-41d4-9cb9-68d34c57fbe1" #aus
 # Fetch dataset items from Apify
 dataset_base_url = "https://api.apify.com/v2/datasets"
@@ -44,7 +44,57 @@ CUSTOM_FIELDS = {
     "person2_work_email": "25cf48c981ab9ab316519347a6835ece494d2c93"
 }
 
+usa_keywords = [
+    "united states", "usa", "us", "u.s.", "u.s.a",
+    # Abbreviations
+    "al","ak","az","ar","ca","co","ct","de","fl","ga","hi","id","il","in","ia","ks","ky","la","me","md","ma","mi","mn",
+    "ms","mo","mt","ne","nv","nh","nj","nm","ny","nc","nd","oh","ok","or","pa","ri","sc","sd","tn","tx","ut","vt","va",
+    "wa","wv","wi","wy",
+    "alabama","alaska","arizona","arkansas","california","colorado","connecticut","delaware","florida","georgia",
+    "hawaii","idaho","illinois","indiana","iowa","kansas","kentucky","louisiana","maine","maryland","massachusetts",
+    "michigan","minnesota","mississippi","missouri","montana","nebraska","nevada","new hampshire","new jersey",
+    "new mexico","new york","north carolina","north dakota","ohio","oklahoma","oregon","pennsylvania","rhode island",
+    "south carolina","south dakota","tennessee","texas","utah","vermont","virginia","washington","west virginia",
+    "wisconsin","wyoming"
+    
+]
+
+other_countries = {
+    "australia": "Australia",
+    "united kingdom": "UK",
+    "uk": "UK",
+    "canada": "Canada",
+    "ksa":"Saudi Arabia",
+    "saudi arabia": "Saudi Arabia",
+    "dubai": "Dubai",
+    "united arab emirates": "UAE",
+    "uae": "UAE",
+    "new zealand": "New Zealand",
+    "qatar": "Qatar",
+    "united states":"USA"
+}
+
 app = FastAPI()
+def detect_country_easy(location):
+    loc_lower = location.lower()
+    
+    # Check non-USA countries first
+    for key, country in other_countries.items():
+        if key in loc_lower:
+            return country
+    
+    # Check USA keywords
+    for word in loc_lower.replace(",", "").split():
+        if word in usa_keywords:
+            return "USA"
+    return location
+
+
+def tag_countries(data):
+    for obj in data :
+        obj["Country"] = detect_country_easy(obj.get("location", ""))
+    return data
+
 
 async def fetch(session, url):
     async with session.get(url, headers=header_of_apify) as resp:
@@ -59,7 +109,8 @@ async def send_to_clay(session, item):
         "Location": item.get('location'),
         "Sector": item.get('sector'),
         "Description": item.get('description'),
-        "Job Url": item.get('jobUrl')
+        "Job Url": item.get('jobUrl'),
+        "Country": item.get('Country')
     }
     async with session.post(url_of_clay_webhook, headers=headers_of_clay, json=payload_clay) as res:
         print("Status:", res.status)
@@ -214,7 +265,8 @@ async def handle(request: Request):
 
     async with aiohttp.ClientSession() as session:
         dataset_items = await fetch(session, dataset_url)
-        unique_items = await check_uniqueness_and_send_to_clay(session, dataset_items)
+        tagged_items = tag_countries(dataset_items)
+        unique_items = await check_uniqueness_and_send_to_clay(session, tagged_items)
         return {"status": "Processed successfully"}
 
 
